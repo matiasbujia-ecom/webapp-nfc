@@ -1,62 +1,10 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-/dist
-
-# misc
+﻿# Sistema operativo
 .DS_Store
-*.pem
 Thumbs.db
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (keep example)
+# Node / Next.js (ya no se usan)
+node_modules/
+.next/
 .env
-.env.*
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# supabase
-supabase/.temp
-supabase/.branches
-
-# IDE / editor
-.idea/
-.vscode/*
-!.vscode/extensions.json
-*.swp
-*.swo
-
-# local agent / cursor caches (keep project mcp.json)
-.cursor/*
-!.cursor/mcp.json
-
-# OS
-.AppleDouble
-.LSOverride
+.env.local
+.env.*.local
