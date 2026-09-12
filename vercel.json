@@ -1,5 +1,7 @@
 {
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/((?!paginas/.*).*)", "destination": "/index.html" }
+    { "source": "/subir", "destination": "/subir.html" },
+    { "source": "/((?!(paginas/|subir).*).*)", "destination": "/index.html" }
   ]
 }

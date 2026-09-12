@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#121214" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Subir Álbum — Visor 3D NFC</title>
+
+  <!-- PDF.js para procesar PDFs en el celular -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- JSZip para empaquetado opcional -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; min-height: 100%;
+      background: #121214;
+      background-image: radial-gradient(circle at top center, #1f2026 0%, #121214 70%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+      padding: 20px 16px 60px;
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #c9a86a;
+      background: rgba(201, 168, 106, 0.12);
+      border: 1px solid rgba(201, 168, 106, 0.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    p.subtitle {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.5;
+    }
+
+    .card {
+      background: rgba(30, 30, 35, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      letter-spacing: 0.04em;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: rgba(18, 18, 20, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus, input[type="password"]:focus {
+      border-color: #c9a86a;
+      box-shadow: 0 0 0 3px rgba(201, 168, 106, 0.2);
+    }
+
+    .help-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.4;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(18, 18, 20, 0.6);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .dropzone {
+      border: 2px dashed rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(18, 18, 20, 0.4);
+      transition: border-color 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dropzone:active, .dropzone.dragover {
+      border-color: #c9a86a;
+      background: rgba(201, 168, 106, 0.05);
+    }
+
+    .dropzone-icon {
+      font-size: 32px;
+    }
+
+    .dropzone-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .dropzone-desc {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    #file-input { display: none; }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 4px;
+      border-radius: 10px;
+      background: rgba(18, 18, 20, 0.5);
+    }
+
+    .preview-item {
+      position: relative;
+      aspect-ratio: 0.707;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #000;
+    }
+
+    .preview-item img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-tag {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .btn-main {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #c9a86a 0%, #a8833e 100%);
+      color: #121214;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(201, 168, 106, 0.35);
+      transition: transform 0.15s, opacity 0.2s;
+    }
+
+    .btn-main:active { transform: scale(0.98); }
+    .btn-main:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .progress-box {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(18, 18, 20, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: #c9a86a;
+      transition: width 0.2s ease;
+    }
+
+    .progress-status {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .success-box {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(40, 167, 69, 0.15);
+      border: 1px solid rgba(40, 167, 69, 0.35);
+      text-align: center;
+    }
+
+    .success-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #4cd964;
+    }
+
+    .btn-link {
+      display: block;
+      padding: 12px;
+      background: #4cd964;
+      color: #121214;
+      font-weight: 700;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .btn-copy {
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .footer-nav {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .footer-nav a {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">NFC Photo Album</div>
+    <h1>Subir Álbum Digital</h1>
+    <p class="subtitle">Sube fotos desde tu galería o un PDF. Se procesarán y ordenarán automáticamente como 1.jpg, 2.jpg... en tu repositorio.</p>
+  </header>
+
+  <div class="card">
+    <div class="field">
+      <label for="input-album">Identificador del Álbum (ID)</label>
+      <input type="text" id="input-album" placeholder="ej. boda-marcos-2025, cumple-sofia..." autocomplete="off" />
+      <span class="help-text">Se guardará en <code>paginas/[ID]/</code>. Será el ID para tu tag NFC.</span>
+    </div>
+
+    <div class="field">
+      <label for="input-token">GitHub Personal Access Token (PAT)</label>
+      <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+      <span class="help-text">Se guarda solo en tu celular. Necesario para subir las fotos directamente a GitHub sin usar la compu.</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-photos" type="button">📷 Fotos de Galería</button>
+      <button class="tab-btn" id="tab-pdf" type="button">📄 Archivo PDF</button>
+    </div>
+
+    <!-- Dropzone -->
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon" id="dropzone-icon">📷</div>
+      <div class="dropzone-title" id="dropzone-title">Selecciona fotos de tu celular</div>
+      <div class="dropzone-desc" id="dropzone-desc">Puedes seleccionar hasta 50 fotos de una sola vez</div>
+      <input type="file" id="file-input" multiple accept="image/*" />
+    </div>
+
+    <!-- Vista previa -->
+    <div id="preview-area" style="display:none; flex-direction:column; gap:8px;">
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:rgba(255,255,255,0.7);">
+        <span id="preview-count">0 páginas listas</span>
+        <span style="color:#c9a86a; cursor:pointer;" id="btn-clear">Limpiar</span>
+      </div>
+      <div class="preview-grid" id="preview-grid"></div>
+    </div>
+
+    <!-- Barra de progreso -->
+    <div class="progress-box" id="progress-box">
+      <div class="progress-status">
+        <span id="progress-text">Procesando…</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Éxito -->
+    <div class="success-box" id="success-box">
+      <div class="success-title">🎉 ¡Álbum publicado con éxito!</div>
+      <p style="font-size:13px; color:rgba(255,255,255,0.8);" id="success-desc"></p>
+      <a href="#" target="_blank" class="btn-link" id="btn-view-album">Abrir Álbum 3D</a>
+      <button class="btn-copy" id="btn-copy-url">Copiar URL para Tag NFC</button>
+    </div>
+
+    <!-- Botón Subir -->
+    <button class="btn-main" id="btn-upload" disabled>
+      <span>Publicar Álbum</span>
+    </button>
+  </div>
+
+  <div class="footer-nav">
+    <a href="/">← Volver al visor principal</a>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Configuración de PDF.js
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const REPO = 'matiasbujia-ecom/webapp-nfc';
+
+  // DOM
+  const inputAlbum = document.getElementById('input-album');
+  const inputToken = document.getElementById('input-token');
+  const tabPhotos = document.getElementById('tab-photos');
+  const tabPdf = document.getElementById('tab-pdf');
+  const dropzone = document.getElementById('dropzone');
+  const dropzoneIcon = document.getElementById('dropzone-icon');
+  const dropzoneTitle = document.getElementById('dropzone-title');
+  const dropzoneDesc = document.getElementById('dropzone-desc');
+  const fileInput = document.getElementById('file-input');
+  const previewArea = document.getElementById('preview-area');
+  const previewGrid = document.getElementById('preview-grid');
+  const previewCount = document.getElementById('preview-count');
+  const btnClear = document.getElementById('btn-clear');
+  const btnUpload = document.getElementById('btn-upload');
+  const progressBox = document.getElementById('progress-box');
+  const progressText = document.getElementById('progress-text');
+  const progressPct = document.getElementById('progress-pct');
+  const progressFill = document.getElementById('progress-fill');
+  const successBox = document.getElementById('success-box');
+  const successDesc = document.getElementById('success-desc');
+  const btnViewAlbum = document.getElementById('btn-view-album');
+  const btnCopyUrl = document.getElementById('btn-copy-url');
+
+  let modo = 'photos'; // 'photos' o 'pdf'
+  let paginasProcesadas = []; // Array de { n: 1, blob: Blob, dataUrl: string }
+
+  // Cargar token guardado de localStorage
+  const savedToken = localStorage.getItem('gh_pat_token');
+  if (savedToken) inputToken.value = savedToken;
+
+  inputToken.addEventListener('input', () => {
+    localStorage.setItem('gh_pat_token', inputToken.value.trim());
+    validarForm();
+  });
+
+  inputAlbum.addEventListener('input', () => {
+    inputAlbum.value = inputAlbum.value.toLowerCase().replace(/[^a-z0-9_\-\.]/g, '');
+    validarForm();
+  });
+
+  // Tabs
+  tabPhotos.addEventListener('click', () => {
+    modo = 'photos';
+    tabPhotos.classList.add('active');
+    tabPdf.classList.remove('active');
+    fileInput.multiple = true;
+    fileInput.accept = 'image/*';
+    dropzoneIcon.textContent = '📷';
+    dropzoneTitle.textContent = 'Selecciona fotos de tu celular';
+    dropzoneDesc.textContent = 'Puedes seleccionar hasta 50 fotos de una sola vez';
+    limpiarArchivos();
+  });
+
+  tabPdf.addEventListener('click', () => {
+    modo = 'pdf';
+    tabPdf.classList.add('active');
+    tabPhotos.classList.remove('active');
+    fileInput.multiple = false;
+    fileInput.accept = 'application/pdf';
+    dropzoneIcon.textContent = '📄';
+    dropzoneTitle.textContent = 'Selecciona un archivo PDF';
+    dropzoneDesc.textContent = 'Extraeremos automáticamente cada página como 1.jpg, 2.jpg...';
+    limpiarArchivos();
+  });
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    if (modo === 'photos') {
+      await procesarFotos(files);
+    } else {
+      await procesarPdf(files[0]);
+    }
+    validarForm();
+  });
+
+  btnClear.addEventListener('click', limpiarArchivos);
+
+  function limpiarArchivos() {
+    paginasProcesadas = [];
+    previewGrid.innerHTML = '';
+    previewArea.style.display = 'none';
+    fileInput.value = '';
+    successBox.style.display = 'none';
+    progressBox.style.display = 'none';
+    validarForm();
+  }
+
+  function validarForm() {
+    const ok = inputAlbum.value.trim().length > 0 &&
+               inputToken.value.trim().length > 10 &&
+               paginasProcesadas.length > 0;
+    btnUpload.disabled = !ok;
+  }
+
+  // 1. Procesar Fotos (Redimensionar a 1200px max y comprimir JPEG)
+  async function procesarFotos(files) {
+    mostrarProgreso('Optimizando imágenes para móvil…', 10);
+    paginasProcesadas = [];
+    previewGrid.innerHTML = '';
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const dataUrl = await leerComoDataURL(file);
+      const img = await cargarImagen(dataUrl);
+
+      // Redimensionar si es muy grande (máx 1400px alto/ancho para cargar rápido en móvil)
+      const canvas = document.createElement('canvas');
+      const maxDim = 1400;
+      let w = img.width;
+      let h = img.height;
+
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.88));
+      const finalUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+      paginasProcesadas.push({
+        num: i + 1,
+        filename: `${i + 1}.jpg`,
+        blob: blob,
+        dataUrl: finalUrl
+      });
+
+      agregarPreview(i + 1, finalUrl);
+      const pct = Math.round(((i + 1) / files.length) * 100);
+      mostrarProgreso(`Procesando foto ${i + 1} de ${files.length}…`, pct);
+    }
+
+    previewArea.style.display = 'flex';
+    previewCount.textContent = `${paginasProcesadas.length} fotos numeradas (1.jpg - ${paginasProcesadas.length}.jpg)`;
+    ocultarProgreso();
+  }
+
+  // 2. Procesar PDF (Renderizar cada página a JPEG)
+  async function procesarPdf(file) {
+    mostrarProgreso('Cargando PDF…', 10);
+    paginasProcesadas = [];
+    previewGrid.innerHTML = '';
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const numPages = pdf.numPages;
+
+      for (let i = 1; i <= numPages; i++) {
+        mostrarProgreso(`Convirtiendo página ${i} de ${numPages}…`, Math.round((i / numPages) * 100));
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 }); // Alta resolución
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.88));
+        const finalUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+        paginasProcesadas.push({
+          num: i,
+          filename: `${i}.jpg`,
+          blob: blob,
+          dataUrl: finalUrl
+        });
+
+        agregarPreview(i, finalUrl);
+      }
+
+      previewArea.style.display = 'flex';
+      previewCount.textContent = `${numPages} páginas extraídas del PDF`;
+    } catch (err) {
+      alert('Error al leer el PDF: ' + err.message);
+    } finally {
+      ocultarProgreso();
+    }
+  }
+
+  function agregarPreview(num, src) {
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    item.innerHTML = `<img src="${src}" alt="Pág ${num}" loading="lazy" /><span class="preview-tag">${num}.jpg</span>`;
+    previewGrid.appendChild(item);
+  }
+
+  function mostrarProgreso(txt, pct) {
+    progressBox.style.display = 'flex';
+    progressText.textContent = txt;
+    progressPct.textContent = pct + '%';
+    progressFill.style.width = pct + '%';
+  }
+
+  function ocultarProgreso() {
+    setTimeout(() => { progressBox.style.display = 'none'; }, 500);
+  }
+
+  function leerComoDataURL(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  function cargarImagen(src) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = src;
+    });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        res(base64);
+      };
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // 3. Subida directa a GitHub API
+  btnUpload.addEventListener('click', async () => {
+    const albumId = inputAlbum.value.trim();
+    const token = inputToken.value.trim();
+
+    if (!albumId || !token || !paginasProcesadas.length) return;
+
+    btnUpload.disabled = true;
+    progressBox.style.display = 'flex';
+
+    try {
+      const total = paginasProcesadas.length;
+
+      for (let i = 0; i < total; i++) {
+        const pag = paginasProcesadas[i];
+        const pct = Math.round(((i + 1) / total) * 100);
+        mostrarProgreso(`Subiendo página ${pag.num} de ${total} a GitHub…`, pct);
+
+        const base64Content = await blobToBase64(pag.blob);
+        const filePath = `paginas/${albumId}/${pag.filename}`;
+        const url = `https://api.github.com/repos/${REPO}/contents/${filePath}`;
+
+        // Verificar si el archivo ya existe para obtener su SHA (sobrescribir)
+        let sha = null;
+        try {
+          const checkRes = await fetch(url, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          if (checkRes.ok) {
+            const fileData = await checkRes.json();
+            sha = fileData.sha;
+          }
+        } catch (_) {}
+
+        const bodyData = {
+          message: `feat: subir ${filePath}`,
+          content: base64Content
+        };
+        if (sha) bodyData.sha = sha;
+
+        const putRes = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(bodyData)
+        });
+
+        if (!putRes.ok) {
+          const errData = await putRes.json();
+          throw new Error(errData.message || `Error en ${pag.filename} (HTTP ${putRes.status})`);
+        }
+      }
+
+      // Éxito
+      ocultarProgreso();
+      const albumUrl = `${window.location.origin}/?id=${albumId}`;
+      successDesc.innerHTML = `Se subieron <b>${total} páginas</b> a la carpeta <code>paginas/${albumId}/</code>. Vercel desplegará los cambios en 1 minuto.`;
+      btnViewAlbum.href = albumUrl;
+      successBox.style.display = 'flex';
+
+      btnCopyUrl.onclick = () => {
+        navigator.clipboard.writeText(albumUrl).then(() => {
+          btnCopyUrl.textContent = '✓ ¡URL Copiada!';
+          setTimeout(() => { btnCopyUrl.textContent = 'Copiar URL para Tag NFC'; }, 2000);
+        });
+      };
+
+    } catch (err) {
+      alert('Error durante la subida: ' + err.message);
+      ocultarProgreso();
+      btnUpload.disabled = false;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

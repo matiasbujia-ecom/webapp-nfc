@@ -294,7 +294,7 @@
   <div id="error-panel">
     <span id="error-icon">📂</span>
     <p id="error-msg">No se encontraron imágenes en la carpeta.</p>
-    <span id="error-path"></span>
+    <span id="error-path"></span>`r`n    <a href="/subir" style="margin-top:12px; color:#c9a86a; font-size:13px; text-decoration:none; padding:8px 18px; border:1px solid rgba(201,168,106,0.4); border-radius:20px; background:rgba(201,168,106,0.1);">+ Subir fotos desde el celular</a>
   </div>
 
   <!-- Aplicación Principal -->
@@ -516,7 +516,49 @@
         if (hueco) break; // Detener en el primer 404
       }
 
+      if (encontradas.length === 0) {
+        const pdfUrl = basePath + 'album.pdf';
+        const pdfExiste = await sondearImagen(pdfUrl);
+        if (pdfExiste) {
+          loaderText.textContent = 'Cargando archivo PDF…';
+          return await extraerPaginasDePdf(pdfUrl);
+        }
+      }
+
       return encontradas;
+    }
+
+    async function extraerPaginasDePdf(pdfUrl) {
+      if (!window.pdfjsLib) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload = res;
+          s.onerror = rej;
+          document.head.appendChild(s);
+        });
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      const total = pdf.numPages;
+      const paginasPdf = [];
+
+      for (let i = 1; i <= total; i++) {
+        loaderText.textContent = 'Procesando PDF (' + i + ' de ' + total + ')…';
+        progressBarFill.style.width = Math.round((i / total) * 100) + '%';
+        loaderProgress.textContent = i + ' de ' + total + ' páginas';
+
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.8 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        paginasPdf.push(canvas.toDataURL('image/jpeg', 0.88));
+      }
+      return paginasPdf;
     }
 
     // ── 3. Precarga Progresiva ──────────────────────────────────────
