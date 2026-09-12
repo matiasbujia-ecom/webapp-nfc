@@ -3,5 +3,13 @@
   "rewrites": [
     { "source": "/subir", "destination": "/subir.html" },
     { "source": "/((?!(paginas/|subir).*).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/paginas/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
   ]
 }
