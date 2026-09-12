@@ -71,7 +71,7 @@
     var CARPETA_DEMO = 'demo';
     var params = new URLSearchParams(window.location.search);
     var albumId = (params.get('id') || CARPETA_DEMO).trim().replace(/[^a-zA-Z0-9_\-\.]/g, '');
-    var basePath = 'paginas/' + albumId + '/';
+    var basePath = './paginas/' + albumId + '/';
     document.getElementById('titulo').textContent = '\u2726 ' + albumId + ' \u2726';
     document.title = albumId;
     var loaderEl = document.getElementById('loader');
@@ -90,7 +90,7 @@
           var ctrl = new AbortController();
           var timer = setTimeout(function() { ctrl.abort(); }, TIMEOUT_MS);
           fetch(url, { method: 'HEAD', signal: ctrl.signal })
-            .then(function(res) { clearTimeout(timer); resolve(res.ok); })
+            .then(function(res) { clearTimeout(timer); var ct = (res.headers.get('content-type') || '').toLowerCase(); resolve(res.ok && !ct.includes('text/html')); })
             .catch(function() { resolve(false); });
         } catch(e) { resolve(false); }
       });
@@ -190,3 +190,4 @@
   </script>
 </body>
 </html>
+
