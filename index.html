@@ -455,22 +455,28 @@
       }
     }
 
-    // ── 2. Detección Inteligente de Imágenes Secuenciales ───────────
+    // ── 2. Detección Inteligente y Bypass de Caché Stale ────────────
+    const forceLatest = urlParams.get('v') === 'latest' || urlParams.get('fresh') !== null;
+    const cacheBuster = 't=' + (urlParams.get('v') || Date.now());
+    const localBase = './paginas/' + clientId + '/';
+    const cdnBase = 'https://cdn.jsdelivr.net/gh/matiasbujia-ecom/webapp-nfc@main/paginas/' + clientId + '/';
+
     function sondearImagen(url) {
       return new Promise(function (resolve) {
         try {
           const ctrl = new AbortController();
           const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+          const sep = url.includes('?') ? '&' : '?';
+          const fetchUrl = url + sep + cacheBuster;
 
-          fetch(url, { method: 'HEAD', signal: ctrl.signal })
+          fetch(fetchUrl, { method: 'HEAD', signal: ctrl.signal, cache: 'no-cache' })
             .then(function (res) {
               clearTimeout(timer);
               const ct = (res.headers.get('content-type') || '').toLowerCase();
               resolve(res.ok && !ct.includes('text/html'));
             })
             .catch(function () {
-              // Si falla HEAD, probar con GET ligero por seguridad
-              fetch(url, { method: 'GET', signal: ctrl.signal })
+              fetch(fetchUrl, { method: 'GET', signal: ctrl.signal, cache: 'no-cache' })
                 .then(function (res) {
                   clearTimeout(timer);
                   const ct = (res.headers.get('content-type') || '').toLowerCase();
@@ -484,16 +490,13 @@
       });
     }
 
-    async function detectarImagenes() {
+    async function sondearSecuencia(base) {
       const encontradas = [];
-      loaderText.textContent = 'Detectando páginas…';
-
       for (let i = 1; i <= MAX_PAGINAS; i += BATCH_SIZE) {
         const lote = [];
         for (let j = i; j < i + BATCH_SIZE && j <= MAX_PAGINAS; j++) {
-          lote.push({ n: j, url: basePath + j + '.jpg' });
+          lote.push({ n: j, url: base + j + '.jpg' });
         }
-
         const resultados = await Promise.all(
           lote.map(async (item) => ({
             n: item.n,
@@ -501,7 +504,6 @@
             existe: await sondearImagen(item.url)
           }))
         );
-
         let hueco = false;
         for (let k = 0; k < resultados.length; k++) {
           const r = resultados[k];
@@ -513,20 +515,43 @@
             hueco = true;
           }
         }
+        if (hueco) break;
+      }
+      return encontradas;
+    }
 
-        if (hueco) break; // Detener en el primer 404
+    async function detectarImagenes() {
+      loaderText.textContent = 'Detectando páginas…';
+      let imagenes = [];
+
+      if (forceLatest) {
+        // Carga forzada desde el CDN directo de GitHub
+        imagenes = await sondearSecuencia(cdnBase);
       }
 
-      if (encontradas.length === 0) {
-        const pdfUrl = basePath + 'album.pdf';
-        const pdfExiste = await sondearImagen(pdfUrl);
-        if (pdfExiste) {
+      if (imagenes.length === 0) {
+        // Probar ruta local
+        imagenes = await sondearSecuencia(localBase);
+      }
+
+      // Si el entorno local está desactualizado (ej. solo 4 fotos) y el CDN tiene más
+      if (imagenes.length < 17) {
+        const imagenesCdn = await sondearSecuencia(cdnBase);
+        if (imagenesCdn.length > imagenes.length) {
+          imagenes = imagenesCdn;
+        }
+      }
+
+      // Fallback a archivo PDF si no hay JPGs
+      if (imagenes.length === 0) {
+        const pdfUrl = localBase + 'album.pdf';
+        if (await sondearImagen(pdfUrl)) {
           loaderText.textContent = 'Cargando archivo PDF…';
           return await extraerPaginasDePdf(pdfUrl);
         }
       }
 
-      return encontradas;
+      return imagenes;
     }
 
     async function extraerPaginasDePdf(pdfUrl) {
